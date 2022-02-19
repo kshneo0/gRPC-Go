@@ -53,47 +53,17 @@ func main() {
 
 	fmt.Printf("Blog was read: %v \n", readBlogRes)
 
-}
-
-
-func (*server) UpdateBlog(ctx context.Context, req *blogpb.UpdateBlogRequest) (*blogpb.UpdateBlogResponse, error) {
-	fmt.Println("Update blog request")
-	blog := req.GetBlog()
-	oid, err := primitive.ObjectIDFromHex(blog.GetId())
-	if err != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			fmt.Sprintf("Cannot parse ID"),
-		)
+	// update Blog
+	newBlog := &blogpb.Blog{
+		Id:       blogID,
+		AuthorId: "Changed Author",
+		Title:    "My First Blog (edited)",
+		Content:  "Content of the first blog, with some awesome additions!",
 	}
-
-	// create an empty struct
-	data := &blogItem{}
-	filter := bson.M{"_id": oid}
-
-	res := collection.FindOne(ctx, filter)
-	if err := res.Decode(data); err != nil {
-		return nil, status.Errorf(
-			codes.NotFound,
-			fmt.Sprintf("Cannot find blog with specified ID: %v", err),
-		)
-	}
-
-	// we update our internal struct
-	data.AuthorID = blog.GetAuthorId()
-	data.Content = blog.GetContent()
-	data.Title = blog.GetTitle()
-
-	_, updateErr := collection.ReplaceOne(context.Background(), filter, data)
+	updateRes, updateErr := c.UpdateBlog(context.Background(), &blogpb.UpdateBlogRequest{Blog: newBlog})
 	if updateErr != nil {
-		return nil, status.Errorf(
-			codes.Internal,
-			fmt.Sprintf("Cannot update object in MongoDB: %v", updateErr),
-		)
+		fmt.Printf("Error happened while updating: %v \n", updateErr)
 	}
-
-	return &blogpb.UpdateBlogResponse{
-		Blog: dataToBlogPb(data),
-	}, nil
+	fmt.Printf("Blog was updated: %v\n", updateRes)
 
 }
