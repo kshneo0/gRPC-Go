@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"gopkg.in/mgo.v2/bson"
 )
@@ -235,8 +236,9 @@ func main() {
 
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
-	// blogpb.RegisterBlogServiceServer(s, nil)
 	blogpb.RegisterBlogServiceServer(s, &server{})
+	// Register reflection service on gRPC server.
+	reflection.Register(s)
 
 	go func() {
 		fmt.Println("Starting Server...")
@@ -251,15 +253,14 @@ func main() {
 
 	// Block until a signal is received
 	<-ch
-
-	// Finally, we stop the server
-	fmt.Println("Stopping the server")
-	s.Stop()
-	fmt.Println("Closing the listener")
-	lis.Close()
+	// First we close the connection with MongoDB:
 	fmt.Println("Closing MongoDB Connection")
 	if err := client.Disconnect(context.TODO()); err != nil {
 		log.Fatalf("Error on disconnection with MongoDB : %v", err)
 	}
+
+	// Finally, we stop the server
+	fmt.Println("Stopping the server")
+	s.Stop()
 	fmt.Println("End of Program")
 }
